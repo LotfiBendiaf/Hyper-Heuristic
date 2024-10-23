@@ -19,9 +19,9 @@ class Processor:
 
     def execute_task(self, task):
         execution_time = task.workload / self.speed
-        print(f"Task {task.task_id} executed on Processor {self.proc_id} in {execution_time:.2f} seconds.")
+        # print(f"Task {task.task_id} executed on Processor {self.proc_id} in {execution_time:.2f} seconds.")
         self.tasks.append(task)
-        self.total_workload += task.workload / self.speed  # Add the task workload to the processor's total workload
+        self.total_workload += execution_time  # Add the task workload to the processor's total workload
 
     def get_total_workload(self):
         return self.total_workload  # Return the total workload of the processor
@@ -31,6 +31,36 @@ class Scheduler:
     def __init__(self, tasks, processors):
         self.tasks = tasks
         self.processors = processors
+    
+    def schedule_tasks(self, policy, subset):
+        match policy:
+            case "firstIn_firstOut":
+                self.fcfs_schedule(subset)
+            case "round_robin":
+                self.round_robin_schedule(subset)
+            case "priority_based":
+                self.priority_based_schedule(subset)
+            case "min_min":
+                self.min_min_schedule(subset)
+            case "min_queued_elements":
+                self.min_queued_elements(subset)
+            case "max_min":
+                self.max_min_schedule(subset)
+            case "short_job_first":
+                self.sjf_schedule(subset)
+            case "long_job_first":
+                self.ljf_schedule(subset)
+            case "load_balancing":
+                self.load_balancing_schedule(subset)
+            case "greedy_best_fit":
+                self.greedy_best_fit_schedule(subset)
+            case "weighted_round_robin":
+                self.weighted_round_robin_schedule(subset)
+            case "threshold_based":
+                self.threshold_based_schedule(subset)
+            case _:
+                raise ValueError(f"Unknown scheduling policy: {policy}")
+ 
     
     def assign_task_to_processor(self, task, processor):
         task.assigned_processor = processor.proc_id
@@ -103,7 +133,7 @@ class Scheduler:
             self.assign_task_to_processor(task, best_processor)
 
     # Threshold based heuristic
-    def threshold_based_schedule(self, task_subset, threshold):
+    def threshold_based_schedule(self, task_subset, threshold=200):
         for task in task_subset:
             if task.workload > threshold:
                 # Assign to the highest-speed processor
@@ -175,7 +205,7 @@ class Scheduler:
             task_subset.remove(max_task)
 
 # Create 20 tasks with random workloads
-tasks = [Task(task_id=i, workload=random.randint(50, 300)) for i in range(1, 21)]
+tasks = [Task(task_id=i, workload=random.randint(50, 300)) for i in range(1, 101)]
 
 
 # Create 4 processors with varying speeds
@@ -189,13 +219,22 @@ processors = [
 # Initialize the scheduler
 scheduler = Scheduler(tasks, processors)
 
-# Divide tasks: first 10 for Min-Min, remaining 10 for Max-Min
-first_half_tasks = tasks[:10]
-second_half_tasks = tasks[10:]
+# Divide tasks
+sep1 = random.randint(1, 15)
+sep2 = random.randint(15, 45)
+sep3 = random.randint(45, 80)
 
-# Apply Min-Min heuristic on the first 10 tasks
-print("\nRunning Min-Min on the first 10 tasks:")
-scheduler.threshold_based_schedule(first_half_tasks, 200)
+sep = [sep1, sep2, sep3]
+
+
+sequence = ['firstIn_firstOut', 'min_min', 'max_min', 'min_queued_elements']
+
+# Apply heuristic on the first tasks subset
+print(f"\nRunning heuristic on the first {sep1} tasks:")
+scheduler.schedule_tasks(policy=sequence[0], subset=tasks[:sep[0]])
+scheduler.schedule_tasks(policy=sequence[1], subset=tasks[sep[0]:sep[1]])
+scheduler.schedule_tasks(policy=sequence[2], subset=tasks[sep[1]:sep[2]])
+scheduler.schedule_tasks(policy=sequence[3], subset=tasks[sep[2]:])
 
 # Task IDs assigned to each processor
 for processor in processors:
@@ -208,23 +247,4 @@ for processor in processors:
 
 # Calculate and print the makespan (maximum total workload across all processors)
 makespan = max(processor.get_total_workload() for processor in processors)
-print(f"The makespan: {makespan}")
-
-# Apply Max-Min heuristic on the first 10 tasks
-print("\nRunning Max-Min on the first 10 tasks:")
-scheduler.fcfs_schedule(second_half_tasks)
-
-# Task IDs assigned to each processor
-for processor in processors:
-    print(f"Total workload {processor.get_total_workload():.2f}, ", end="")
-    print(f"Tasks assigned to Processor {processor.proc_id}: ", end="") 
-    
-    # Print all task IDs assigned to the processor
-    task_ids = [task.task_id for task in processor.tasks]
-    print(task_ids if task_ids else "No tasks assigned")
-
-# Calculate and print the makespan (maximum total workload across all processors)
-makespan = max(processor.get_total_workload() for processor in processors)
 print(f"The makespan: {makespan:.2f}")
-
-
